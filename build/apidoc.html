@@ -1,0 +1,276 @@
+<div class="apidocDiv">
+<style>
+/*csslint
+*/
+.apidocDiv {
+    background: #fff;
+    font-family: Arial, Helvetica, sans-serif;
+}
+.apidocDiv a[href] {
+    color: #33f;
+    font-weight: bold;
+    text-decoration: none;
+}
+.apidocDiv a[href]:hover {
+    text-decoration: underline;
+}
+.apidocCodeCommentSpan {
+    background: #bbf;
+    color: #000;
+    display: block;
+}
+.apidocCodeKeywordSpan {
+    color: #d00;
+    font-weight: bold;
+}
+.apidocCodePre {
+    background: #eef;
+    border: 1px solid;
+    color: #777;
+    padding: 5px;
+    white-space: pre-wrap;
+}
+.apidocFooterDiv {
+    margin-top: 20px;
+    text-align: center;
+}
+.apidocModuleLi {
+    margin-top: 10px;
+}
+.apidocSectionDiv {
+    border-top: 1px solid;
+    margin-top: 20px;
+}
+.apidocSignatureSpan {
+    color: #777;
+    font-weight: bold;
+}
+</style>
+<h1>api documentation for
+    <a
+
+        href="https://github.com/maxogden/binary-csv"
+
+    >binary-csv (v0.2.3)</a>
+</h1>
+<h4>A fast CSV binary data parser written in javascript</h4>
+<div class="apidocSectionDiv"><a
+    href="#apidoc.tableOfContents"
+    id="apidoc.tableOfContents"
+><h1>table of contents</h1></a><ol>
+
+    <li class="apidocModuleLi"><a href="#apidoc.module.binary-csv">module binary-csv</a><ol>
+
+        <li>
+
+            <a class="apidocElementLiA" href="#apidoc.element.binary-csv.binary-csv">
+            function <span class="apidocSignatureSpan"></span>binary-csv
+            <span class="apidocSignatureSpan">(opts)</span>
+            </a>
+
+        </li>
+
+    </ol></li>
+
+</ol></div>
+
+<div class="apidocSectionDiv">
+<h1><a href="#apidoc.module.binary-csv" id="apidoc.module.binary-csv">module binary-csv</a></h1>
+
+
+    <h2>
+        <a href="#apidoc.element.binary-csv.binary-csv" id="apidoc.element.binary-csv.binary-csv">
+        function <span class="apidocSignatureSpan"></span>binary-csv
+        <span class="apidocSignatureSpan">(opts)</span>
+        </a>
+    </h2>
+    <ul>
+    <li>description and source-code<pre class="apidocCodePre">function CSV(opts) {
+  if (!(this instanceof CSV)) return new CSV(opts)
+  if (!opts) opts = {}
+
+  var newline
+  var buffered
+  var headers
+  var inQuotes
+
+  var defaults = {
+    separator: &#x27;,&#x27;,
+    newline: &#x27;\n&#x27;,
+    detectNewlines: true,
+    json: false
+  }
+
+  opts = extend(defaults, opts)
+
+  if (opts.headers) {
+    headers = opts.headers
+  }
+
+  // alias &#x27;delimiter&#x27; to &#x27;newline&#x27;
+  if (opts.delimiter) opts.newline = opts.delimiter
+
+  if (opts.detectNewlines) delete opts.newline
+  else newline = new Buffer(opts.newline)
+
+  var comma = new Buffer(opts.separator || &#x27;,&#x27;)[0]
+
+  var stream = through.obj(write, end)
+
+  stream.line = line
+  stream.cell = cell
+  stream.options = opts
+
+  return stream
+
+  function write(buf, enc, next) {
+
+    inQuotes = false
+
+    var offset = 0
+
+    if (buffered) {
+      buf = Buffer.concat([buffered, buf])
+      buffered = undefined
+    }
+
+    if (!newline) {
+      for (var i = 0; i &#x3c; buf.length; i++) {
+        if (buf[i] === 13) { // \r
+          if (i === buf.length) return
+          if (buf[i + 1] === 10) { // \n
+            newline = new Buffer(&#x27;\r\n&#x27;)
+            break
+          } else {
+            newline = new Buffer(&#x27;\r&#x27;)
+            break
+          }
+        } else if (buf[i] === 10) { // \n
+          if (i === buf.length) return
+          newline = new Buffer(&#x27;\n&#x27;)
+          break
+        }
+      }
+    }
+
+    while (buf) {
+      var idx
+      if (newline) idx = nextLine(buf, offset)
+      if (idx) {
+        var line = buf.slice(offset, idx)
+        if (idx === buf.length) {
+          buffered = line
+          buf = undefined
+          offset = idx
+        } else {
+          queue(line)
+          offset = idx + newline.length
+        }
+      } else {
+        if (offset &#x3e;= buf.length) {
+          buffered = undefined
+        } else {
+          buffered = buf.slice(offset, buf.length)
+        }
+        buf = undefined
+      }
+    }
+
+    next()
+  }
+
+  function end() {
+    if (buffered) queue(buffered)
+    queue(null)
+  }
+
+  function queue(lineBuffer) {
+    if (opts.json &#x26;&#x26; lineBuffer) {
+      var cells = line(lineBuffer)
+      for (var i = 0; i &#x3c; cells.length; i++) {
+        cells[i] = cell(cells[i]).toString()
+      }
+      if (!headers) return headers = cells
+      lineBuffer = zip(headers, cells)
+    }
+    stream.push(lineBuffer)
+  }
+
+  function zip(headers, cells) {
+    var obj = {}
+    for (var i = 0; i &#x3c; headers.length; i++) obj[headers[i]] = cells[i]
+    return obj
+  }
+
+  function nextLine(buf, offset) {
+    var i = offset
+    if (offset &#x3e;= buf.length) return false
+    for (var i = offset; i &#x3c; buf.length; i++) {
+      if (buf[i] === quote) { // &#x22;
+        if (buf[i + 1] === quote) { // &#x22;&#x22;
+          i++
+        } else {
+          inQuotes = !inQuotes
+        }
+        continue
+      }
+      if (buf[i] === newline[0]) {
+        if (newline.length &#x3e; 1) { // multichar newlines e.g. /r/n
+          var fullMatch = true
+          for (var j = i, k = 0; j &#x3c; i + newline.length; j++, k++) {
+            if (buf[j] !== newline[k]) {
+              fullMatch = false
+              break
+            }
+          }
+          if (fullMatch &#x26;&#x26; !inQuotes) return j - newline.length
+        } else { // singlechar newlines e.g. \n
+          if (!inQuotes) break
+        }
+      }
+    }
+
+    var idx = i + newline.length - 1
+    if (idx &#x3e; buf.length) return false
+
+    return idx
+  }
+
+  function line(buf) {
+    var cells = []
+    var inQuotes = false
+    var offset = 0
+    for (var i = 0; i &#x3c; buf.length; i++) {
+      if (buf[i] === quote) { // &#x22;
+        if (buf[i + 1] === quote) { // &#x22;&#x22;
+          i++
+        } else {
+          inQuotes = !inQuotes
+        }
+        continue
+      }
+      if (buf[i] === comma &#x26;&#x26; !inQuotes) {
+        var cell = buf.slice(offset, i)
+        cells.push(cell)
+        offset = i + 1
+      }
+    }
+    if (offset &#x3c; buf.length) cells.push(buf.slice(offset, buf.length))
+    if (buf[buf.length - 1] === comma) cells.push(new Buffer(0))
+    return cells
+  }
+
+  function cell(buf) {
+    if (buf[0] === quote &#x26;&#x26; buf[buf.length - 1] === qu ...</pre></li>
+    <li>example usage<pre class="apidocCodePre">n/a</pre></li>
+    </ul>
+
+
+</div>
+
+<div class="apidocFooterDiv">
+    [ this document was created with
+    <a href="https://github.com/kaizhu256/node-utility2" target="_blank">utility2</a>
+    ]
+</div>
+</div>
