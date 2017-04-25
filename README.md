@@ -1,6 +1,6 @@
 # npmdoc-binary-csv
 
-#### api documentation for  [binary-csv (v0.2.3)](https://github.com/maxogden/binary-csv)  [![npm package](https://img.shields.io/npm/v/npmdoc-binary-csv.svg?style=flat-square)](https://www.npmjs.org/package/npmdoc-binary-csv) [![travis-ci.org build-status](https://api.travis-ci.org/npmdoc/node-npmdoc-binary-csv.svg)](https://travis-ci.org/npmdoc/node-npmdoc-binary-csv)
+#### basic api documentation for  [binary-csv (v0.2.3)](https://github.com/maxogden/binary-csv)  [![npm package](https://img.shields.io/npm/v/npmdoc-binary-csv.svg?style=flat-square)](https://www.npmjs.org/package/npmdoc-binary-csv) [![travis-ci.org build-status](https://api.travis-ci.org/npmdoc/node-npmdoc-binary-csv.svg)](https://travis-ci.org/npmdoc/node-npmdoc-binary-csv)
 
 #### A fast CSV binary data parser written in javascript
 
